@@ -10,7 +10,21 @@ app.post('/chatbot', (req, res) => {
   // Onboarding: Send welcome message when added to a space
   if (req.body.type === 'ADDED_TO_SPACE') {
     return res.json({
-      text: 'Hi, GChat bot at your service! Type "hello" to greet me, or just send a message and I will echo it back. To restrict access, only certain emails are allowed.'
+      cards: [
+        {
+          sections: [
+            {
+              widgets: [
+                {
+                  textParagraph: {
+                    text: 'Hi, GChat bot at your service! Type "hello" to greet me, or just send a message and I will echo it back. To restrict access, only certain emails are allowed.'
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
     });
   }
 
@@ -27,13 +41,43 @@ app.post('/chatbot', (req, res) => {
     message = req.body.chat.message.text;
     email = req.body.chat.message.sender?.email || '';
   } else {
-    return res.json({ text: 'Invalid request format' });
+    return res.json({
+      cards: [
+        {
+          sections: [
+            {
+              widgets: [
+                {
+                  textParagraph: {
+                    text: 'Invalid request format'
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    });
   }
 
   const allowedEmails = ['azad.vt@techjays.com'];
   if (!allowedEmails.includes(email)) {
     return res.json({
-      text: '❌ Unauthorized access.'
+      cards: [
+        {
+          sections: [
+            {
+              widgets: [
+                {
+                  textParagraph: {
+                    text: '❌ Unauthorized access.'
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
     });
   }
 
@@ -45,7 +89,21 @@ app.post('/chatbot', (req, res) => {
   }
 
   res.json({
-    text: reply
+    cards: [
+      {
+        sections: [
+          {
+            widgets: [
+              {
+                textParagraph: {
+                  text: reply
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ]
   });
 });
 
