@@ -11,42 +11,41 @@ app.post('/chatbot', (req, res) => {
   const email = req.body.message?.sender?.email || '';
 
   const allowedEmails = ['azad.vt@techjays.com'];
+
+  let responseText = '';
+
   if (!allowedEmails.includes(email)) {
-    return res.json({
-      cardsV2: [{
-        card: {
-          sections: [{
-            widgets: [{
-              textParagraph: {
-                text: '❌ Unauthorized access.'
-              }
-            }]
-          }]
-        }
-      }]
-    });
-  }
-
-  let reply = '';
-  if (message.toLowerCase().includes('hello')) {
-    reply = `Hi ${email.split('@')[0]}! 👋`;
+    responseText = '❌ Unauthorized access.';
+  } else if (message.toLowerCase().includes('hello')) {
+    responseText = `Hi ${email.split('@')[0]}! 👋`;
   } else {
-    reply = `You said: "${message}"`;
+    responseText = `You said: "${message}"`;
   }
 
-  res.json({
-    cardsV2: [{
-      card: {
-        sections: [{
-          widgets: [{
-            textParagraph: {
-              text: reply
-            }
-          }]
-        }]
+  // Proper Google Chat response using `cards`
+  const response = {
+    cards: [
+      {
+        header: {
+          title: 'GChat Bot',
+          subtitle: 'Your AI Assistant'
+        },
+        sections: [
+          {
+            widgets: [
+              {
+                textParagraph: {
+                  text: responseText
+                }
+              }
+            ]
+          }
+        ]
       }
-    }]
-  });
+    ]
+  };
+
+  res.json(response);
 });
 
 app.get('/', (req, res) => {
