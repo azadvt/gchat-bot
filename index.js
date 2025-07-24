@@ -6,26 +6,39 @@ const PORT = process.env.PORT || 3000;
 
 app.use(bodyParser.json());
 
-app.post('/chatbot', (req, res) => {
-  // Onboarding: Send welcome message when added to a space
-  if (req.body.type === 'ADDED_TO_SPACE') {
-    return res.json({
-      cards: [
-        {
+function makeCardV2Response(text) {
+  const cardId = `card-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+  return {
+    actionResponse: {
+      type: "NEW_MESSAGE"
+    },
+    cardsV2: [
+      {
+        cardId,
+        card: {
           sections: [
             {
               widgets: [
                 {
                   textParagraph: {
-                    text: 'Hi, GChat bot at your service! Type "hello" to greet me, or just send a message and I will echo it back. To restrict access, only certain emails are allowed.'
+                    text
                   }
                 }
               ]
             }
           ]
         }
-      ]
-    });
+      }
+    ]
+  };
+}
+
+app.post('/chatbot', (req, res) => {
+  // Onboarding: Send welcome message when added to a space
+  if (req.body.type === 'ADDED_TO_SPACE') {
+    return res.json(makeCardV2Response(
+      'Hi, GChat bot at your service! Type "hello" to greet me, or just send a message and I will echo it back. To restrict access, only certain emails are allowed.'
+    ));
   }
 
   // Support both classic and V2 payloads
@@ -41,44 +54,12 @@ app.post('/chatbot', (req, res) => {
     message = req.body.chat.message.text;
     email = req.body.chat.message.sender?.email || '';
   } else {
-    return res.json({
-      cards: [
-        {
-          sections: [
-            {
-              widgets: [
-                {
-                  textParagraph: {
-                    text: 'Invalid request format'
-                  }
-                }
-              ]
-            }
-          ]
-        }
-      ]
-    });
+    return res.json(makeCardV2Response('Invalid request format'));
   }
 
   const allowedEmails = ['azad.vt@techjays.com'];
   if (!allowedEmails.includes(email)) {
-    return res.json({
-      cards: [
-        {
-          sections: [
-            {
-              widgets: [
-                {
-                  textParagraph: {
-                    text: '❌ Unauthorized access.'
-                  }
-                }
-              ]
-            }
-          ]
-        }
-      ]
-    });
+    return res.json(makeCardV2Response('❌ Unauthorized access.'));
   }
 
   let reply = '';
@@ -88,23 +69,7 @@ app.post('/chatbot', (req, res) => {
     reply = `You said: "${message}"`;
   }
 
-  res.json({
-    cards: [
-      {
-        sections: [
-          {
-            widgets: [
-              {
-                textParagraph: {
-                  text: reply
-                }
-              }
-            ]
-          }
-        ]
-      }
-    ]
-  });
+  res.json(makeCardV2Response(reply));
 });
 
 app.get('/', (req, res) => {
