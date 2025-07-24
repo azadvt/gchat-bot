@@ -6,25 +6,21 @@ const PORT = process.env.PORT || 3000;
 
 app.use(bodyParser.json());
 
-function makeCardV2Response(text) {
-  const cardId = `card-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+function makeCardResponse(text) {
   return {
-    cardsV2: [
+    cards: [
       {
-        cardId,
-        card: {
-          sections: [
-            {
-              widgets: [
-                {
-                  textParagraph: {
-                    text
-                  }
+        sections: [
+          {
+            widgets: [
+              {
+                textParagraph: {
+                  text
                 }
-              ]
-            }
-          ]
-        }
+              }
+            ]
+          }
+        ]
       }
     ]
   };
@@ -33,7 +29,7 @@ function makeCardV2Response(text) {
 app.post('/chatbot', (req, res) => {
   // Onboarding: Send welcome message when added to a space
   if (req.body.type === 'ADDED_TO_SPACE') {
-    return res.json(makeCardV2Response(
+    return res.json(makeCardResponse(
       'Hi, GChat bot at your service! Type "hello" to greet me, or just send a message and I will echo it back. To restrict access, only certain emails are allowed.'
     ));
   }
@@ -51,12 +47,12 @@ app.post('/chatbot', (req, res) => {
     message = req.body.chat.message.text;
     email = req.body.chat.message.sender?.email || '';
   } else {
-    return res.json(makeCardV2Response('Invalid request format'));
+    return res.json(makeCardResponse('Invalid request format'));
   }
 
   const allowedEmails = ['azad.vt@techjays.com'];
   if (!allowedEmails.includes(email)) {
-    return res.json(makeCardV2Response('❌ Unauthorized access.'));
+    return res.json(makeCardResponse('❌ Unauthorized access.'));
   }
 
   let reply = '';
@@ -66,7 +62,7 @@ app.post('/chatbot', (req, res) => {
     reply = `You said: "${message}"`;
   }
 
-  res.json(makeCardV2Response(reply));
+  res.json(makeCardResponse(reply));
 });
 
 app.get('/', (req, res) => {
