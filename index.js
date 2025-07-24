@@ -14,8 +14,21 @@ app.post('/chatbot', (req, res) => {
     });
   }
 
-  const message = req.body.message?.text || '';
-  const email = req.body.message?.sender?.email || '';
+  // Support both classic and V2 payloads
+  let message = '';
+  let email = '';
+
+  if (req.body.message && req.body.message.text) {
+    // Classic
+    message = req.body.message.text;
+    email = req.body.message.sender?.email || '';
+  } else if (req.body.chat && req.body.chat.message && req.body.chat.message.text) {
+    // V2
+    message = req.body.chat.message.text;
+    email = req.body.chat.message.sender?.email || '';
+  } else {
+    return res.json({ text: 'Invalid request format' });
+  }
 
   const allowedEmails = ['azad.vt@techjays.com'];
   if (!allowedEmails.includes(email)) {
@@ -26,7 +39,7 @@ app.post('/chatbot', (req, res) => {
 
   let reply = '';
   if (message.toLowerCase().includes('hello')) {
-    reply = `Hi ${email.split('@')[0]}! 👋`;
+    reply = `Hi ${email.split('@')[0]}! 👋 How can I help you today?`;
   } else {
     reply = `You said: "${message}"`;
   }
