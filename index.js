@@ -11,7 +11,7 @@ app.post('/chatbot', (req, res) => {
   const email = req.body.message?.sender?.email || '';
 
   // Basic email auth (replace with real logic)
-  const allowedEmails = ['azad.vt@techjay.com'];
+  const allowedEmails = ['azad.vt@techjays.com'];
   if (!allowedEmails.includes(email)) {
     return res.json({ text: 'Unauthorized access.' });
   }
