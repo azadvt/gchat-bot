@@ -10,33 +10,23 @@ app.post('/chatbot', (req, res) => {
   const message = req.body.message?.text || '';
   const email = req.body.message?.sender?.email || '';
 
-  // Basic email auth
   const allowedEmails = ['azad.vt@techjays.com'];
   if (!allowedEmails.includes(email)) {
     return res.json({
-      cardsV2: [
-        {
-          cardId: "unauthorized-card",
-          card: {
-            header: { title: "Unauthorized Access" },
-            sections: [
-              {
-                widgets: [
-                  {
-                    textParagraph: {
-                      text: "You are not authorized to use this bot."
-                    }
-                  }
-                ]
+      cardsV2: [{
+        card: {
+          sections: [{
+            widgets: [{
+              textParagraph: {
+                text: '❌ Unauthorized access.'
               }
-            ]
-          }
+            }]
+          }]
         }
-      ]
+      }]
     });
   }
 
-  // Handle the message
   let reply = '';
   if (message.toLowerCase().includes('hello')) {
     reply = `Hi ${email.split('@')[0]}! 👋`;
@@ -44,30 +34,18 @@ app.post('/chatbot', (req, res) => {
     reply = `You said: "${message}"`;
   }
 
-  // Respond with Google Chat card
   res.json({
-    cardsV2: [
-      {
-        cardId: "response-card",
-        card: {
-          header: {
-            title: "GChat Bot",
-            subtitle: "Response from your bot"
-          },
-          sections: [
-            {
-              widgets: [
-                {
-                  textParagraph: {
-                    text: reply
-                  }
-                }
-              ]
+    cardsV2: [{
+      card: {
+        sections: [{
+          widgets: [{
+            textParagraph: {
+              text: reply
             }
-          ]
-        }
+          }]
+        }]
       }
-    ]
+    }]
   });
 });
 
