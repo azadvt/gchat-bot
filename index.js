@@ -9,9 +9,6 @@ app.use(bodyParser.json());
 function makeCardV2Response(text) {
   const cardId = `card-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
   return {
-    actionResponse: {
-      type: "NEW_MESSAGE"
-    },
     cardsV2: [
       {
         cardId,
