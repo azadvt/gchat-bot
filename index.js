@@ -11,41 +11,56 @@ app.post('/chatbot', (req, res) => {
   const email = req.body.message?.sender?.email || '';
 
   const allowedEmails = ['azad.vt@techjays.com'];
-
-  let responseText = '';
-
   if (!allowedEmails.includes(email)) {
-    responseText = '❌ Unauthorized access.';
-  } else if (message.toLowerCase().includes('hello')) {
-    responseText = `Hi ${email.split('@')[0]}! 👋`;
-  } else {
-    responseText = `You said: "${message}"`;
-  }
-
-  // Proper Google Chat response using `cards`
-  const response = {
-    cards: [
-      {
-        header: {
-          title: 'GChat Bot',
-          subtitle: 'Your AI Assistant'
-        },
-        sections: [
-          {
-            widgets: [
+    return res.json({
+      cardsV2: [
+        {
+          cardId: 'unauthorized-card',
+          card: {
+            sections: [
               {
-                textParagraph: {
-                  text: responseText
-                }
+                widgets: [
+                  {
+                    textParagraph: {
+                      text: '❌ Unauthorized access.'
+                    }
+                  }
+                ]
               }
             ]
           }
-        ]
+        }
+      ]
+    });
+  }
+
+  let reply = '';
+  if (message.toLowerCase().includes('hello')) {
+    reply = `Hi ${email.split('@')[0]}! 👋`;
+  } else {
+    reply = `You said: "${message}"`;
+  }
+
+  res.json({
+    cardsV2: [
+      {
+        cardId: 'response-card',
+        card: {
+          sections: [
+            {
+              widgets: [
+                {
+                  textParagraph: {
+                    text: reply
+                  }
+                }
+              ]
+            }
+          ]
+        }
       }
     ]
-  };
-
-  res.json(response);
+  });
 });
 
 app.get('/', (req, res) => {
