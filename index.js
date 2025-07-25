@@ -102,37 +102,53 @@ app.post('/chatbot', (req, res) => {
 });
 
 function handleMessageEvent(event, res) {
+  logToFile('=== START handleMessageEvent ===');
+  
   const messageText = event.message?.text || '';
   const email = event.message?.sender?.email || '';
   const spaceName = event.space?.name || '';
+
+  logToFile(`Raw messageText: "${messageText}"`);
+  logToFile(`Raw email: "${email}"`);
+  logToFile(`Raw spaceName: "${spaceName}"`);
 
   const msgLog = `Message from ${email} in ${spaceName}: ${messageText}`;
   console.log(msgLog);
   logToFile(msgLog);
 
   if (!messageText.trim()) {
-    logToFile('Empty message received');
+    logToFile('Empty message received - sending empty message response');
     return res.json(makeResponse('I received your message but it appears to be empty. Please send me some text!'));
   }
 
+  logToFile(`Checking email authorization for: ${email}`);
   const allowedEmails = ['azad.vt@techjays.com'];
   if (!allowedEmails.includes(email)) {
-    logToFile(`Unauthorized access attempt by: ${email}`);
+    logToFile(`Unauthorized access attempt by: ${email} - sending unauthorized response`);
     return res.json(makeResponse('❌ Unauthorized access. You are not authorized to use this bot. Please contact the administrator.'));
   }
 
+  logToFile(`Email ${email} is authorized - processing message`);
+
   // Only respond to hello/hi messages
   const lowerMessage = messageText.toLowerCase();
+  logToFile(`Lowercase message: "${lowerMessage}"`);
+  
   if (lowerMessage.includes('hello') || lowerMessage.includes('hi')) {
+    logToFile('Message contains hello/hi - generating response');
     const name = email.split('@')[0];
     const reply = `Hi ${name}, how can I help you?`;
     
-    logToFile(`Reply to ${email}: ${reply}`);
+    logToFile(`Generated reply: ${reply}`);
+    logToFile(`Sending response: ${JSON.stringify(makeResponse(reply))}`);
+    logToFile('=== END handleMessageEvent (hello response) ===');
     return res.json(makeResponse(reply));
   }
 
   // For all other messages, don't respond or give a simple message
-  logToFile(`No response for message: ${messageText}`);
+  logToFile(`Message does not contain hello/hi - sending default response`);
+  logToFile(`Sending response: ${JSON.stringify(makeResponse('Please say hello to start our conversation.'))}`);
+  logToFile('=== END handleMessageEvent (default response) ===');
   return res.json(makeResponse('Please say hello to start our conversation.'));
 }
 
