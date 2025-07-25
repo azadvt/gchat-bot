@@ -24,9 +24,27 @@ app.post('/chatbot', (req, res) => {
     const reqLog = 'Received full request body: ' + JSON.stringify(req.body, null, 2);
     // console.log(reqLog);
 
-    // Handle the actual Google Chat webhook structure
-    const event = req.body;
-    const eventType = req.body.type;
+    let event;
+    let eventType;
+
+    // Handle different Google Chat webhook structures
+    if (req.body.type) {
+      // Direct event structure
+      event = req.body;
+      eventType = req.body.type;
+    } else if (req.body.chat && req.body.chat.messagePayload) {
+      // Interactive card/app configuration event with message payload
+      event = req.body.chat.messagePayload;
+      eventType = 'MESSAGE';
+    } else if (req.body.authorizationEventObject) {
+      // App authorization event - treat as configuration
+      eventType = 'AUTHORIZATION';
+      event = req.body;
+    } else {
+      console.error('Unrecognized request format received:', JSON.stringify(req.body, null, 2));
+      console.log('Unrecognized request format received: ' + JSON.stringify(req.body));
+      return res.status(400).json(makeResponse('Invalid request format received. Please check payload structure.'));
+    }
 
     if (!eventType) {
         console.error('Could not determine event type from request body');
@@ -54,6 +72,10 @@ app.post('/chatbot', (req, res) => {
         const cardClickedLog = `Card clicked: ${event.action?.actionMethodName || 'unknown'}`;
         console.log(cardClickedLog);
         return res.json(makeResponse('Card action received!'));
+
+      case 'AUTHORIZATION':
+        console.log('Authorization event received');
+        return res.json(makeResponse('✅ Bot authorization completed successfully!'));
 
       default:
         const unhandledLog = `Unhandled event type: ${eventType}`;
