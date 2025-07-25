@@ -114,50 +114,10 @@ app.post('/chatbot', (req, res) => {
 });
 
 function handleMessageEvent(event, res) {
-  const messageText = event.message?.text || '';
-  const email = event.message?.sender?.email || '';
-  const spaceName = event.space?.name || '';
-
-  const msgLog = `Message from ${email} in ${spaceName}: ${messageText}`;
-  console.log(msgLog);
-  logToFile(msgLog);
-
-  if (!messageText.trim()) {
-    logToFile('Empty message received');
-    // *** IMPORTANT CHANGE HERE: Revert to simple text response ***
-    return res.json({ text: 'I received your message but it appears to be empty. Please send me some text!' });
-  }
-
-  const allowedEmails = ['azad.vt@techjays.com'];
-  if (!allowedEmails.includes(email)) {
-    logToFile(`Unauthorized access attempt by: ${email}`);
-    // *** IMPORTANT CHANGE HERE: Revert to simple text response ***
-    return res.json({ text: '❌ Unauthorized access. You are not authorized to use this bot. Please contact the administrator.' });
-  }
-
-  let reply = '';
-  const lowerMessage = messageText.toLowerCase();
-
-  if (lowerMessage.includes('hello') || lowerMessage.includes('hi')) {
-    reply = `Hi ${email.split('@')[0]}! 👋 How can I help you today?`;
-  } else if (lowerMessage.includes('help')) {
-    reply = `Here are some things you can ask me:
-• Say "hello" or "hi" for a greeting
-• Ask me anything and I'll respond
-• Say "help" to see this message again
-• I'm here to help! 🤖`;
-  } else if (lowerMessage.includes('time') || lowerMessage.includes('date')) {
-    const now = new Date();
-    reply = `🕐 Current time: ${now.toLocaleString('en-US', { timeZone: 'Asia/Bangkok' })}`;
-  } else if (lowerMessage.includes('weather')) {
-    reply = `🌤️ I can't check the weather yet, but I'm working on it! For now, try asking me something else.`;
-  } else {
-    reply = `You said: "${messageText}"\n\nI'm a simple bot. Try saying "hello", "help", or ask me about the time!`;
-  }
-
-  logToFile(`Reply to ${email}: ${reply}`);
-  // *** IMPORTANT CHANGE HERE: Revert to simple text response ***
-  return res.json({ text: reply });
+  console.log('handleMessageEvent called.');
+  logToFile('handleMessageEvent called.');
+  // Temporarily bypass all logic, just send a response
+  return res.json({ text: 'Hello from simplified bot!' });
 }
 
 app.get('/', (req, res) => {
