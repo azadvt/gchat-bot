@@ -7,13 +7,13 @@ const PORT = process.env.PORT || 3000;
 
 app.use(bodyParser.json());
 
-// Helper function to log to file
+// Helper function to log to file (keep this, it's good for debugging)
 function logToFile(message) {
   const timestamp = new Date().toISOString();
   fs.appendFileSync('server.log', `[${timestamp}] ${message}\n`);
 }
 
-// Middleware to log all requests
+// Middleware to log all requests (keep this, it's good for debugging)
 app.use((req, res, next) => {
   const logMsg = `${req.method} ${req.path}`;
   console.log(`${new Date().toISOString()} - ${logMsg}`);
@@ -21,186 +21,138 @@ app.use((req, res, next) => {
   next();
 });
 
-// Helper function to determine response format based on request
-function getResponseFormat(event) {
-  // If the request has authorizationEventObject or commonEventObject, it's likely a Workspace Add-on
-  if (event.authorizationEventObject || event.commonEventObject) {
-    return 'addon';
-  }
-  return 'chat';
-}
-
-// Helper function to create add-on card response
-function createAddonCardResponse(text) {
+// THIS FUNCTION IS CORRECT FOR CREATING A CARD RESPONSE
+function makeCardResponse(text) {
   return {
-    renderActions: {
-      action: {
-        navigations: [{
-          updateCard: {
-            sections: [{
-              widgets: [{
+    cards: [
+      {
+        sections: [
+          {
+            widgets: [
+              {
                 textParagraph: {
-                  text: text
+                  text
                 }
-              }]
-            }]
+              }
+            ]
           }
-        }]
+        ]
       }
-    }
-  };
-}
-
-// Helper function to create simple card response
-function createSimpleCardResponse(text) {
-  return {
-    cards: [{
-      sections: [{
-        widgets: [{
-          textParagraph: {
-            text: text
-          }
-        }]
-      }]
-    }]
-  };
-}
-
-// Helper function to create text response
-function createTextResponse(text) {
-  return {
-    text: text
+    ]
   };
 }
 
 app.post('/chatbot', (req, res) => {
   try {
-    const reqLog = 'Received request: ' + JSON.stringify(req.body, null, 2);
+    const reqLog = 'Received full request body: ' + JSON.stringify(req.body, null, 2);
     console.log(reqLog);
     logToFile(reqLog);
-    
-    // Handle Google Chat event
-    const event = req.body;
-    
-    // Determine response format
-    const responseFormat = getResponseFormat(event);
-    logToFile(`Response format detected: ${responseFormat}`);
-    
-    // Check for different Google Chat event formats
-    let eventType = null;
-    let messageData = null;
-    let spaceData = null;
-    let senderData = null;
-    
-    if (event.type) {
-      // Direct event format
-      eventType = event.type;
-      messageData = event.message;
-      spaceData = event.space;
-      senderData = event.message?.sender;
-    } else if (event.chat && event.chat.messagePayload) {
-      // Wrapped event format (what you're receiving)
-      eventType = 'MESSAGE'; // This is a message event
-      messageData = event.chat.messagePayload.message;
-      spaceData = event.chat.messagePayload.space;
-      senderData = event.chat.messagePayload.message?.sender;
-    } else if (event.eventTime && event.space) {
-      // Another possible format
-      eventType = event.type || 'MESSAGE';
-      messageData = event.message;
-      spaceData = event.space;
-      senderData = event.message?.sender;
+
+    let event;
+    let eventType;
+
+    // --- Adapt to Google Chat V1 vs V2 payloads ---
+    if (req.body.type) {
+      // V1 Event
+      event = req.body;
+      eventType = req.body.type;
+    } else if (req.body.chat) { // Check if 'chat' object exists for V2 events
+        if (req.body.chat.messagePayload && req.body.chat.messagePayload.message) {
+            // V2 MESSAGE event
+            event = req.body.chat.messagePayload;
+            eventType = 'MESSAGE';
+        } else if (req.body.chat.type) {
+            // Other V2 events (ADDED_TO_SPACE, REMOVED_FROM_SPACE, CARD_CLICKED)
+            event = req.body.chat;
+            eventType = req.body.chat.type;
+        } else {
+            // Fallback for unrecognized V2 structure within 'chat'
+            console.warn('Unknown V2 event structure within chat object:', JSON.stringify(req.body, null, 2));
+            eventType = 'UNKNOWN_V2_EVENT_CHAT';
+            event = req.body.chat;
+        }
     } else {
-      console.error('Invalid event format received');
-      logToFile('Invalid event format received - unrecognized structure');
-      const errorResponse = responseFormat === 'addon' 
-        ? createAddonCardResponse('Invalid request format')
-        : createTextResponse('Invalid request format');
-      return res.status(400).json(errorResponse);
+      // Neither V1 nor recognized V2 format
+      console.error('Unrecognized request format received:', JSON.stringify(req.body, null, 2));
+      logToFile('Unrecognized request format received: ' + JSON.stringify(req.body));
+      return res.status(400).json(makeCardResponse('Invalid request format received. Please check payload structure.')); // Use card response for error
     }
 
-    logToFile(`Parsed event type: ${eventType}`);
+    console.log(`Determined event type: ${eventType}`);
+    logToFile(`Determined event type: ${eventType} | Extracted event: ${JSON.stringify(event, null, 2)}`);
+
+    if (!eventType) {
+        console.error('Could not determine event type from request body');
+        logToFile('Could not determine event type from request body');
+        return res.status(400).json(makeCardResponse('Could not determine event type.')); // Use card response for error
+    }
 
     // Handle different event types
     switch (eventType) {
       case 'MESSAGE':
-        return handleMessageEvent(messageData, senderData, spaceData, responseFormat, res);
-      
+        return handleMessageEvent(event, res);
+
       case 'ADDED_TO_SPACE':
-        logToFile('Bot added to space');
-        const welcomeResponse = responseFormat === 'addon'
-          ? createAddonCardResponse('👋 Thanks for adding me to the space! I\'m ready to help. Try saying "hello" or "help" to get started.')
-          : createTextResponse('👋 Thanks for adding me to the space! I\'m ready to help. Try saying "hello" or "help" to get started.');
-        return res.json(welcomeResponse);
-      
+        const addedToSpaceLog = `Bot added to space: ${event.space?.name || 'unknown'}`;
+        console.log(addedToSpaceLog);
+        logToFile(addedToSpaceLog);
+        // *** IMPORTANT CHANGE HERE: Use makeCardResponse ***
+        return res.json(makeCardResponse('👋 Thanks for adding me to the space! I\'m ready to help. Try saying "hello" or "help" to get started.'));
+
       case 'REMOVED_FROM_SPACE':
-        const removedLog = `Bot removed from space: ${spaceData?.name}`;
+        const removedLog = `Bot removed from space: ${event.space?.name || 'unknown'}`;
         console.log(removedLog);
         logToFile(removedLog);
-        const goodbyeResponse = responseFormat === 'addon'
-          ? createAddonCardResponse('Goodbye! 👋')
-          : createTextResponse('Goodbye! 👋');
-        return res.json(goodbyeResponse);
-      
+        // *** IMPORTANT CHANGE HERE: Use makeCardResponse for consistency, though this won't be seen by user ***
+        return res.json(makeCardResponse('Goodbye! 👋'));
+
       case 'CARD_CLICKED':
-        const cardClickedLog = `Card clicked: ${event.action?.actionMethodName}`;
+        const cardClickedLog = `Card clicked: ${event.action?.actionMethodName || 'unknown'}`;
         console.log(cardClickedLog);
         logToFile(cardClickedLog);
-        const cardResponse = responseFormat === 'addon'
-          ? createAddonCardResponse('Card action received!')
-          : createTextResponse('Card action received!');
-        return res.json(cardResponse);
-      
+        // *** IMPORTANT CHANGE HERE: Use makeCardResponse ***
+        return res.json(makeCardResponse('Card action received!'));
+
       default:
         const unhandledLog = `Unhandled event type: ${eventType}`;
         console.log(unhandledLog);
         logToFile(unhandledLog);
-        const defaultResponse = responseFormat === 'addon'
-          ? createAddonCardResponse('I received your event but I\'m not sure how to handle it yet.')
-          : createTextResponse('I received your event but I\'m not sure how to handle it yet.');
-        return res.json(defaultResponse);
+        // *** IMPORTANT CHANGE HERE: Use makeCardResponse ***
+        return res.json(makeCardResponse('I received your event but I\'m not sure how to handle it yet.'));
     }
   } catch (error) {
     console.error('Error processing request:', error);
     logToFile('Error processing request: ' + error.stack);
-    const errorResponse = getResponseFormat(req.body) === 'addon'
-      ? createAddonCardResponse('Sorry, something went wrong. Please try again.')
-      : createTextResponse('Sorry, something went wrong. Please try again.');
-    res.status(500).json(errorResponse);
+    // *** IMPORTANT CHANGE HERE: Use makeCardResponse for error messages ***
+    res.status(500).json(makeCardResponse('Sorry, something went wrong. Please try again.'));
   }
 });
 
-function handleMessageEvent(messageData, senderData, spaceData, responseFormat, res) {
-  const message = messageData?.text || messageData?.argumentText || messageData?.formattedText || '';
-  const email = senderData?.email || '';
-  const spaceName = spaceData?.name || '';
+function handleMessageEvent(event, res) {
+  const messageText = event.message?.text || '';
+  const email = event.message?.sender?.email || '';
+  const spaceName = event.space?.name || '';
 
-  const msgLog = `Message from ${email} in ${spaceName}: ${message}`;
+  const msgLog = `Message from ${email} in ${spaceName}: ${messageText}`;
   console.log(msgLog);
   logToFile(msgLog);
 
-  // Check if message is empty
-  if (!message.trim()) {
+  if (!messageText.trim()) {
     logToFile('Empty message received');
-    const emptyResponse = responseFormat === 'addon'
-      ? createAddonCardResponse('I received your message but it appears to be empty. Please send me some text!')
-      : createTextResponse('I received your message but it appears to be empty. Please send me some text!');
-    return res.json(emptyResponse);
+    // *** IMPORTANT CHANGE HERE: Use makeCardResponse ***
+    return res.json(makeCardResponse('I received your message but it appears to be empty. Please send me some text!'));
   }
 
   const allowedEmails = ['azad.vt@techjays.com'];
   if (!allowedEmails.includes(email)) {
     logToFile(`Unauthorized access attempt by: ${email}`);
-    const unauthorizedResponse = responseFormat === 'addon'
-      ? createAddonCardResponse('❌ Unauthorized access. You are not authorized to use this bot. Please contact the administrator.')
-      : createTextResponse('❌ Unauthorized access. You are not authorized to use this bot. Please contact the administrator.');
-    return res.json(unauthorizedResponse);
+    // *** IMPORTANT CHANGE HERE: Use makeCardResponse ***
+    return res.json(makeCardResponse('❌ Unauthorized access. You are not authorized to use this bot. Please contact the administrator.'));
   }
 
-  // Process the message and generate response
   let reply = '';
-  const lowerMessage = message.toLowerCase();
-  
+  const lowerMessage = messageText.toLowerCase();
+
   if (lowerMessage.includes('hello') || lowerMessage.includes('hi')) {
     reply = `Hi ${email.split('@')[0]}! 👋 How can I help you today?`;
   } else if (lowerMessage.includes('help')) {
@@ -211,22 +163,19 @@ function handleMessageEvent(messageData, senderData, spaceData, responseFormat, 
 • I'm here to help! 🤖`;
   } else if (lowerMessage.includes('time') || lowerMessage.includes('date')) {
     const now = new Date();
-    reply = `🕐 Current time: ${now.toLocaleString()}`;
+    // Using current time: Friday, July 25, 2025 at 9:19:38 AM +07
+    reply = `🕐 Current time: ${now.toLocaleString('en-US', { timeZone: 'Asia/Bangkok' })}`;
   } else if (lowerMessage.includes('weather')) {
     reply = `🌤️ I can't check the weather yet, but I'm working on it! For now, try asking me something else.`;
   } else {
-    reply = `You said: "${message}"\n\nI'm a simple bot. Try saying "hello", "help", or ask me about the time!`;
+    reply = `You said: "${messageText}"\n\nI'm a simple bot. Try saying "hello", "help", or ask me about the time!`;
   }
 
-  logToFile(`Reply to ${email}: ${reply} (Format: ${responseFormat})`);
-  
-  // Return the response in the correct format
-  const response = responseFormat === 'addon'
-    ? createAddonCardResponse(reply)
-    : createTextResponse(reply);
-  
-  return res.json(response);
+  logToFile(`Reply to ${email}: ${reply}`);
+  // *** IMPORTANT CHANGE HERE: Always use makeCardResponse ***
+  return res.json(makeCardResponse(reply));
 }
+
 app.get('/', (req, res) => {
   res.send('GChat bot is running.');
 });
