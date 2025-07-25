@@ -22,41 +22,19 @@ function makeResponse(text) {
 app.post('/chatbot', (req, res) => {
   try {
     const reqLog = 'Received full request body: ' + JSON.stringify(req.body, null, 2);
-    console.log(reqLog);
+    // console.log(reqLog);
 
-    let event;
-    let eventType;
-
-    // --- Adapt to Google Chat V1 vs V2 payloads ---
-    if (req.body.type) {
-      event = req.body;
-      eventType = req.body.type;
-    } else if (req.body.chat) {
-        if (req.body.chat.messagePayload && req.body.chat.messagePayload.message) {
-            event = req.body.chat.messagePayload;
-            eventType = 'MESSAGE';
-        } else if (req.body.chat.type) {
-            event = req.body.chat;
-            eventType = req.body.chat.type;
-        } else {
-            console.warn('Unknown V2 event structure within chat object:', JSON.stringify(req.body, null, 2));
-            eventType = 'UNKNOWN_V2_EVENT_CHAT';
-            event = req.body.chat;
-        }
-    } else {
-      console.error('Unrecognized request format received:', JSON.stringify(req.body, null, 2));
-      console.log('Unrecognized request format received: ' + JSON.stringify(req.body));
-      return res.status(400).json(makeResponse('Invalid request format received. Please check payload structure.'));
-    }
-
-    console.log(`Determined event type: ${eventType}`);
-    console.log(`Determined event type: ${eventType} | Extracted event: ${JSON.stringify(event, null, 2)}`);
+    // Handle the actual Google Chat webhook structure
+    const event = req.body;
+    const eventType = req.body.type;
 
     if (!eventType) {
         console.error('Could not determine event type from request body');
         console.log('Could not determine event type from request body');
         return res.status(400).json(makeResponse('Could not determine event type.'));
     }
+
+    console.log(`Determined event type: ${eventType}`);
 
     switch (eventType) {
       case 'MESSAGE':
@@ -92,6 +70,7 @@ app.post('/chatbot', (req, res) => {
 function handleMessageEvent(event, res) {
   console.log('=== START handleMessageEvent ===');
   
+  // Extract data from the actual webhook structure
   const messageText = event.message?.text || '';
   const email = event.message?.sender?.email || '';
   const spaceName = event.space?.name || '';
