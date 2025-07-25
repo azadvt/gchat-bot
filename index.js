@@ -16,7 +16,15 @@ app.use((req, res, next) => {
 
 // Simple response function
 function makeResponse(text) {
-  return { text: text };
+  return {
+    text: text
+  };
+}
+
+// Helper function to send response with proper headers
+function sendChatResponse(res, responseData) {
+  res.setHeader('Content-Type', 'application/json');
+  res.status(200).json(responseData);
 }
 
 app.post('/chatbot', (req, res) => {
@@ -43,13 +51,15 @@ app.post('/chatbot', (req, res) => {
     } else {
       console.error('Unrecognized request format received:', JSON.stringify(req.body, null, 2));
       console.log('Unrecognized request format received: ' + JSON.stringify(req.body));
-      return res.status(400).json(makeResponse('Invalid request format received. Please check payload structure.'));
+              res.status(400);
+        return sendChatResponse(res, makeResponse('Invalid request format received. Please check payload structure.'));
     }
 
     if (!eventType) {
         console.error('Could not determine event type from request body');
         console.log('Could not determine event type from request body');
-        return res.status(400).json(makeResponse('Could not determine event type.'));
+        res.status(400);
+        return sendChatResponse(res, makeResponse('Could not determine event type.'));
     }
 
     console.log(`Determined event type: ${eventType}`);
@@ -61,31 +71,32 @@ app.post('/chatbot', (req, res) => {
       case 'ADDED_TO_SPACE':
         const addedToSpaceLog = `Bot added to space: ${event.space?.name || 'unknown'}`;
         console.log(addedToSpaceLog);
-        return res.json(makeResponse('👋 Thanks for adding me to the space! I\'m ready to help. Type "hello" or "help" to get started.'));
+        return sendChatResponse(res, makeResponse('👋 Thanks for adding me to the space! I\'m ready to help. Type "hello" or "help" to get started.'));
 
       case 'REMOVED_FROM_SPACE':
         const removedLog = `Bot removed from space: ${event.space?.name || 'unknown'}`;
         console.log(removedLog);
-        return res.json(makeResponse('Goodbye! 👋'));
+        return sendChatResponse(res, makeResponse('Goodbye! 👋'));
 
       case 'CARD_CLICKED':
         const cardClickedLog = `Card clicked: ${event.action?.actionMethodName || 'unknown'}`;
         console.log(cardClickedLog);
-        return res.json(makeResponse('Card action received!'));
+        return sendChatResponse(res, makeResponse('Card action received!'));
 
       case 'AUTHORIZATION':
         console.log('Authorization event received');
-        return res.json(makeResponse('✅ Bot authorization completed successfully!'));
+        return sendChatResponse(res, makeResponse('✅ Bot authorization completed successfully!'));
 
       default:
         const unhandledLog = `Unhandled event type: ${eventType}`;
         console.log(unhandledLog);
-        return res.json(makeResponse('I received your event but I\'m not sure how to handle it yet.'));
+        return sendChatResponse(res, makeResponse('I received your event but I\'m not sure how to handle it yet.'));
     }
   } catch (error) {
     console.error('Error processing request:', error);
     console.log('Error processing request: ' + error.stack);
-    res.status(500).json(makeResponse('Sorry, something went wrong. Please try again.'));
+    res.status(500);
+    return sendChatResponse(res, makeResponse('Sorry, something went wrong. Please try again.'));
   }
 });
 
@@ -106,14 +117,14 @@ function handleMessageEvent(event, res) {
 
   if (!messageText.trim()) {
     console.log('Empty message received - sending empty message response');
-    return res.json(makeResponse('I received your message but it appears to be empty. Please send me some text!'));
+    return sendChatResponse(res, makeResponse('I received your message but it appears to be empty. Please send me some text!'));
   }
 
   console.log(`Checking email authorization for: ${email}`);
   const allowedEmails = ['azad.vt@techjays.com'];
   if (!allowedEmails.includes(email)) {
     console.log(`Unauthorized access attempt by: ${email} - sending unauthorized response`);
-    return res.json(makeResponse('❌ Unauthorized access. You are not authorized to use this bot. Please contact the administrator.'));
+    return sendChatResponse(res, makeResponse('❌ Unauthorized access. You are not authorized to use this bot. Please contact the administrator.'));
   }
 
   console.log(`Email ${email} is authorized - processing message`);
@@ -130,14 +141,14 @@ function handleMessageEvent(event, res) {
     console.log(`Generated reply: ${reply}`);
     console.log(`Sending response: ${JSON.stringify(makeResponse(reply))}`);
     console.log('=== END handleMessageEvent (hello response) ===');
-    return res.json(makeResponse(reply));
+    return sendChatResponse(res, makeResponse(reply));
   }
 
   // For all other messages, don't respond or give a simple message
   console.log(`Message does not contain hello/hi - sending default response`);
   console.log(`Sending response: ${JSON.stringify(makeResponse('Please say hello to start our conversation.'))}`);
   console.log('=== END handleMessageEvent (default response) ===');
-  return res.json(makeResponse('Please say hello to start our conversation.'));
+  return sendChatResponse(res, makeResponse('Please say hello to start our conversation.'));
 }
 
 app.get('/', (req, res) => {
