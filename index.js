@@ -7,13 +7,13 @@ const PORT = process.env.PORT || 3000;
 
 app.use(bodyParser.json());
 
-// Helper function to log to file (keep this, it's good for debugging)
+// Helper function to log to file
 function logToFile(message) {
   const timestamp = new Date().toISOString();
   fs.appendFileSync('server.log', `[${timestamp}] ${message}\n`);
 }
 
-// Middleware to log all requests (keep this, it's good for debugging)
+// Middleware to log all requests
 app.use((req, res, next) => {
   const logMsg = `${req.method} ${req.path}`;
   console.log(`${new Date().toISOString()} - ${logMsg}`);
@@ -21,26 +21,9 @@ app.use((req, res, next) => {
   next();
 });
 
-// THIS FUNCTION IS CORRECT FOR CREATING A CARD RESPONSE
-function makeCardResponse(text) {
-  return {
-    cards: [
-      {
-        sections: [
-          {
-            widgets: [
-              {
-                textParagraph: {
-                  text
-                }
-              }
-            ]
-          }
-        ]
-      }
-    ]
-  };
-}
+// REMOVING makeCardResponse FOR NOW TO SIMPLIFY AND DEBUG THE ERROR
+// If you want to use cards later, we'll reintroduce it with the correct top-level structure.
+// For now, let's focus on getting ANY valid response through.
 
 app.post('/chatbot', (req, res) => {
   try {
@@ -75,7 +58,8 @@ app.post('/chatbot', (req, res) => {
       // Neither V1 nor recognized V2 format
       console.error('Unrecognized request format received:', JSON.stringify(req.body, null, 2));
       logToFile('Unrecognized request format received: ' + JSON.stringify(req.body));
-      return res.status(400).json(makeCardResponse('Invalid request format received. Please check payload structure.')); // Use card response for error
+      // Use simple text response for error
+      return res.status(400).json({ text: 'Invalid request format received. Please check payload structure.' });
     }
 
     console.log(`Determined event type: ${eventType}`);
@@ -84,7 +68,8 @@ app.post('/chatbot', (req, res) => {
     if (!eventType) {
         console.error('Could not determine event type from request body');
         logToFile('Could not determine event type from request body');
-        return res.status(400).json(makeCardResponse('Could not determine event type.')); // Use card response for error
+        // Use simple text response for error
+        return res.status(400).json({ text: 'Could not determine event type.' });
     }
 
     // Handle different event types
@@ -96,35 +81,35 @@ app.post('/chatbot', (req, res) => {
         const addedToSpaceLog = `Bot added to space: ${event.space?.name || 'unknown'}`;
         console.log(addedToSpaceLog);
         logToFile(addedToSpaceLog);
-        // *** IMPORTANT CHANGE HERE: Use makeCardResponse ***
-        return res.json(makeCardResponse('👋 Thanks for adding me to the space! I\'m ready to help. Try saying "hello" or "help" to get started.'));
+        // *** IMPORTANT CHANGE HERE: Revert to simple text response ***
+        return res.json({ text: '👋 Thanks for adding me to the space! I\'m ready to help. Try saying "hello" or "help" to get started.' });
 
       case 'REMOVED_FROM_SPACE':
         const removedLog = `Bot removed from space: ${event.space?.name || 'unknown'}`;
         console.log(removedLog);
         logToFile(removedLog);
-        // *** IMPORTANT CHANGE HERE: Use makeCardResponse for consistency, though this won't be seen by user ***
-        return res.json(makeCardResponse('Goodbye! 👋'));
+        // *** IMPORTANT CHANGE HERE: Revert to simple text response ***
+        return res.json({ text: 'Goodbye! 👋' });
 
       case 'CARD_CLICKED':
         const cardClickedLog = `Card clicked: ${event.action?.actionMethodName || 'unknown'}`;
         console.log(cardClickedLog);
         logToFile(cardClickedLog);
-        // *** IMPORTANT CHANGE HERE: Use makeCardResponse ***
-        return res.json(makeCardResponse('Card action received!'));
+        // *** IMPORTANT CHANGE HERE: Revert to simple text response ***
+        return res.json({ text: 'Card action received!' });
 
       default:
         const unhandledLog = `Unhandled event type: ${eventType}`;
         console.log(unhandledLog);
         logToFile(unhandledLog);
-        // *** IMPORTANT CHANGE HERE: Use makeCardResponse ***
-        return res.json(makeCardResponse('I received your event but I\'m not sure how to handle it yet.'));
+        // *** IMPORTANT CHANGE HERE: Revert to simple text response ***
+        return res.json({ text: 'I received your event but I\'m not sure how to handle it yet.' });
     }
   } catch (error) {
     console.error('Error processing request:', error);
     logToFile('Error processing request: ' + error.stack);
-    // *** IMPORTANT CHANGE HERE: Use makeCardResponse for error messages ***
-    res.status(500).json(makeCardResponse('Sorry, something went wrong. Please try again.'));
+    // *** IMPORTANT CHANGE HERE: Revert to simple text response for error messages ***
+    res.status(500).json({ text: 'Sorry, something went wrong. Please try again.' });
   }
 });
 
@@ -139,15 +124,15 @@ function handleMessageEvent(event, res) {
 
   if (!messageText.trim()) {
     logToFile('Empty message received');
-    // *** IMPORTANT CHANGE HERE: Use makeCardResponse ***
-    return res.json(makeCardResponse('I received your message but it appears to be empty. Please send me some text!'));
+    // *** IMPORTANT CHANGE HERE: Revert to simple text response ***
+    return res.json({ text: 'I received your message but it appears to be empty. Please send me some text!' });
   }
 
   const allowedEmails = ['azad.vt@techjays.com'];
   if (!allowedEmails.includes(email)) {
     logToFile(`Unauthorized access attempt by: ${email}`);
-    // *** IMPORTANT CHANGE HERE: Use makeCardResponse ***
-    return res.json(makeCardResponse('❌ Unauthorized access. You are not authorized to use this bot. Please contact the administrator.'));
+    // *** IMPORTANT CHANGE HERE: Revert to simple text response ***
+    return res.json({ text: '❌ Unauthorized access. You are not authorized to use this bot. Please contact the administrator.' });
   }
 
   let reply = '';
@@ -163,7 +148,6 @@ function handleMessageEvent(event, res) {
 • I'm here to help! 🤖`;
   } else if (lowerMessage.includes('time') || lowerMessage.includes('date')) {
     const now = new Date();
-    // Using current time: Friday, July 25, 2025 at 9:19:38 AM +07
     reply = `🕐 Current time: ${now.toLocaleString('en-US', { timeZone: 'Asia/Bangkok' })}`;
   } else if (lowerMessage.includes('weather')) {
     reply = `🌤️ I can't check the weather yet, but I'm working on it! For now, try asking me something else.`;
@@ -172,8 +156,8 @@ function handleMessageEvent(event, res) {
   }
 
   logToFile(`Reply to ${email}: ${reply}`);
-  // *** IMPORTANT CHANGE HERE: Always use makeCardResponse ***
-  return res.json(makeCardResponse(reply));
+  // *** IMPORTANT CHANGE HERE: Revert to simple text response ***
+  return res.json({ text: reply });
 }
 
 app.get('/', (req, res) => {
