@@ -34,7 +34,7 @@ function makeCardResponse(text) {
               "widgets": [
                 {
                   "textParagraph": {
-                    "text
+                    "text": text
                   }
                 }
               ]
