@@ -163,7 +163,7 @@ app.post('/gchat-bot', (req, res) => {
 
     // Call your custom API here
     const botReply = `You said: "${userMessage}"`;
-
+    console.log('botReply', botReply);
     res.json({
       text: botReply
     });
