@@ -11,26 +11,53 @@ app.use((req, res, next) => {
   const logMsg = `${req.method} ${req.path}`;
   console.log(`${new Date().toISOString()} - ${logMsg}`);
   console.log(`${logMsg} | Body: ${JSON.stringify(req.body)}`);
+  console.log(`Headers: ${JSON.stringify(req.headers)}`);
   next();
 });
 
-// Simple response function
+// Simple response function for Google Workspace Add-ons
 function makeResponse(text) {
   return {
-    text: text
+    renderActions: {
+      action: {
+        navigations: [{
+          updateCard: {
+            sections: [{
+              widgets: [{
+                textParagraph: {
+                  text: text
+                }
+              }]
+            }]
+          }
+        }]
+      }
+    }
   };
 }
 
 // Helper function to send response with proper headers
 function sendChatResponse(res, responseData) {
-  res.setHeader('Content-Type', 'application/json');
-  res.status(200).json(responseData);
+  try {
+    console.log(`SENDING RESPONSE: ${JSON.stringify(responseData)}`);
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Cache-Control', 'no-cache');
+    const response = res.status(200).json(responseData);
+    console.log(`RESPONSE SENT SUCCESSFULLY`);
+    return response;
+  } catch (error) {
+    console.error(`ERROR SENDING RESPONSE: ${error.message}`);
+    console.error(`ERROR STACK: ${error.stack}`);
+    throw error;
+  }
 }
 
 app.post('/chatbot', (req, res) => {
+  console.log('=== WEBHOOK REQUEST RECEIVED ===');
+  
   try {
     const reqLog = 'Received full request body: ' + JSON.stringify(req.body, null, 2);
-    // console.log(reqLog);
+    console.log(reqLog);
 
     let event;
     let eventType;
@@ -153,6 +180,16 @@ function handleMessageEvent(event, res) {
 
 app.get('/', (req, res) => {
   res.send('GChat bot is running.');
+});
+
+// Test endpoint to verify webhook is accessible
+app.get('/chatbot', (req, res) => {
+  console.log('GET request to /chatbot endpoint');
+  res.json({ 
+    status: 'ok', 
+    message: 'Webhook endpoint is accessible',
+    timestamp: new Date().toISOString()
+  });
 });
 
 app.listen(PORT, () => {
