@@ -6,7 +6,7 @@ const PORT = process.env.PORT || 3000;
 
 app.use(bodyParser.json());
 app.post('/gchat-bot', (req, res) => {
-  console.log('[RAW EVENT] Received:', JSON.stringify(req.body, null, 2));
+  // console.log('[RAW EVENT] Received:', JSON.stringify(req.body, null, 2));
 
   const eventType = req.body?.type || 'UNKNOWN';
   console.log('[EVENT TYPE]', eventType);
