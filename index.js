@@ -6,11 +6,9 @@ const PORT = process.env.PORT || 3000;
 
 app.use(bodyParser.json());
 app.post('/gchat-bot', (req, res) => {
-  console.log('[GCHAT EVENT]', JSON.stringify(req.body, null, 2));
-  const event = req.body;
-
-  // Temporary response to avoid timeout
-  res.json({ text: 'Got your message!' });
+  console.log('chatbot called')
+  res.setHeader('Content-Type', 'application/json');
+  res.status(200).json({ text: 'Got your message!' });
 });
 
 
