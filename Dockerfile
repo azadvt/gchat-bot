@@ -13,4 +13,5 @@ EXPOSE 8080
 RUN apk add --no-cache tini
 ENTRYPOINT ["/sbin/tini", "--"]
 
+# Run directly with node instead of npm to avoid signal forwarding issues
 CMD ["node", "index.js"] 

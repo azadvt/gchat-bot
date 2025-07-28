@@ -11,4 +11,7 @@ services:
     # Proper signal handling
     stop_grace_period: 30s
     # Use tini for signal handling
-    init: true 
+    init: true
+    # Ensure proper signal forwarding
+    tty: true
+    stdin_open: true 
