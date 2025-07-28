@@ -18,21 +18,15 @@ app.use((req, res, next) => {
 // Simple response function for Google Workspace Add-ons
 function makeResponse(text) {
   return {
-    renderActions: {
-      action: {
-        navigations: [{
-          updateCard: {
-            sections: [{
-              widgets: [{
-                textParagraph: {
-                  text: text
-                }
-              }]
-            }]
+    cards: [{
+      sections: [{
+        widgets: [{
+          textParagraph: {
+            text: text
           }
         }]
-      }
-    }
+      }]
+    }]
   };
 }
 
